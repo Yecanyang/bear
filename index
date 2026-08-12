@@ -387,7 +387,7 @@
                 return;
             }
 
-            let csvContent = "﻿"; // UTF-8 BOM for Excel Chinese support
+            let csvContent = "\uFEFF"; // UTF-8 BOM for Excel Chinese support
             csvContent += "日期,人名,商品名稱,售價,已收金額,未收金額/尾款,到貨狀態,寄出狀態\n";
 
             records.forEach(r => {
