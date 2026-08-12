@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>進出貨與帳務管理系統</title>
+    <title>進出貨與帳務管理系統 - 雲端基地版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -19,19 +19,51 @@
 
     <!-- Header -->
     <header class="bg-indigo-600 text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex justify-between items-center">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center space-x-3">
                 <i data-lucide="box" class="w-8 h-8"></i>
-                <h1 class="text-2xl font-bold tracking-tight">進出貨與帳務管理系統</h1>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">進出貨與帳務管理系統</h1>
+                    <div class="flex items-center space-x-2 text-xs text-indigo-200 mt-0.5">
+                        <span id="cloudStatusBadge" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                            離線模式 (本機儲存)
+                        </span>
+                    </div>
+                </div>
             </div>
-            <button onclick="exportCSV()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition shadow-sm">
-                <i data-lucide="download" class="w-4 h-4"></i>
-                <span>匯出 CSV 報表</span>
-            </button>
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleCloudConfig()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition shadow-sm border border-indigo-500">
+                    <i data-lucide="cloud" class="w-4 h-4"></i>
+                    <span>☁️ 雲端基地</span>
+                </button>
+                <button onclick="exportCSV()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition shadow-sm border border-indigo-500">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>匯出 CSV</span>
+                </button>
+            </div>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
+
+        <!-- Cloud Base Settings Panel (Hidden by Default) -->
+        <div id="cloudConfigPanel" class="hidden bg-slate-900 text-white rounded-xl shadow-lg p-6 border border-slate-700">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="database" class="w-5 h-5 text-indigo-400"></i>
+                    <h2 class="text-lg font-bold">☁️ 雲端基地連結設定 (Google 試算表)</h2>
+                </div>
+                <button onclick="toggleCloudConfig(false)" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">請貼入您透過 Google Apps Script 部署獲得的 Web App 網址。綁定後，資料將與 Google 試算表即時同步。</p>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input type="url" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button onclick="saveApiUrl()" class="bg-indigo-600 hover:bg-indigo-500 px-5 py-2 rounded-lg text-sm font-medium transition shadow">儲存並連結</button>
+                <button onclick="clearApiUrl()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition text-slate-300">斷開連線</button>
+            </div>
+        </div>
 
         <!-- Metrics Overview -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -82,6 +114,10 @@
                 <button onclick="toggleForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition shadow-sm">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     <span>新增進出貨紀錄</span>
+                </button>
+                <button onclick="fetchCloudData()" id="syncBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <span>重新整理數據</span>
                 </button>
             </div>
 
@@ -164,7 +200,7 @@
 
                 <div class="md:col-span-2 lg:col-span-4 flex justify-end space-x-3 mt-2">
                     <button type="button" onclick="toggleForm(false)" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">取消</button>
-                    <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm">儲存紀錄</button>
+                    <button type="submit" id="saveSubmitBtn" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm">儲存紀錄</button>
                 </div>
             </form>
         </div>
@@ -187,7 +223,7 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="divide-y divide-slate-200 text-sm">
-                        <!-- Dynamic content inserted by JavaScript -->
+                        <!-- Dynamic content -->
                     </tbody>
                 </table>
             </div>
@@ -201,22 +237,98 @@
     </main>
 
     <script>
-        // Sample Initial Data
-        let records = JSON.parse(localStorage.getItem('inventory_records')) || [
-            { id: '1', date: '2026-08-10', person: '陳大文', product: '機械鍵盤 RGB', price: 2500, received: 1000, arrived: true, shipped: false },
-            { id: '2', date: '2026-08-11', person: '林小美', product: '人體工學椅', price: 5800, received: 5800, arrived: true, shipped: true },
-            { id: '3', date: '2026-08-12', person: '黃先生', product: '27吋 4K 顯示器', price: 9200, received: 3000, arrived: false, shipped: false }
-        ];
+        let records = JSON.parse(localStorage.getItem('inventory_records')) || [];
+        let apiUrl = localStorage.getItem('cloud_api_url') || '';
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Set default date input to today
             document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
-            renderTable();
+            updateCloudBadge();
+            if (apiUrl) {
+                document.getElementById('apiUrlInput').value = apiUrl;
+                fetchCloudData();
+            } else {
+                renderTable();
+            }
             lucide.createIcons();
         });
 
-        function saveToStorage() {
-            localStorage.setItem('inventory_records', JSON.stringify(records));
+        function updateCloudBadge() {
+            const badge = document.getElementById('cloudStatusBadge');
+            if (apiUrl) {
+                badge.className = "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800";
+                badge.innerText = "☁️ 雲端基地已連線 (Google 試算表)";
+            } else {
+                badge.className = "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800";
+                badge.innerText = "離線模式 (僅儲存於本機)";
+            }
+        }
+
+        function toggleCloudConfig(show) {
+            const panel = document.getElementById('cloudConfigPanel');
+            if (show === undefined) panel.classList.toggle('hidden');
+            else if (show) panel.classList.remove('hidden');
+            else panel.classList.add('hidden');
+        }
+
+        function saveApiUrl() {
+            const url = document.getElementById('apiUrlInput').value.trim();
+            if (!url.startsWith('https://script.google.com/')) {
+                alert('請輸入正確的 Google Apps Script Web App 網址！');
+                return;
+            }
+            apiUrl = url;
+            localStorage.setItem('cloud_api_url', apiUrl);
+            updateCloudBadge();
+            toggleCloudConfig(false);
+            fetchCloudData();
+        }
+
+        function clearApiUrl() {
+            if (confirm('確定要斷開雲端基地連線嗎？')) {
+                apiUrl = '';
+                localStorage.removeItem('cloud_api_url');
+                document.getElementById('apiUrlInput').value = '';
+                updateCloudBadge();
+                toggleCloudConfig(false);
+            }
+        }
+
+        async function fetchCloudData() {
+            if (!apiUrl) {
+                renderTable();
+                return;
+            }
+            const syncBtn = document.getElementById('syncBtn');
+            syncBtn.classList.add('opacity-50', 'pointer-events-none');
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    records = data;
+                    localStorage.setItem('inventory_records', JSON.stringify(records));
+                    renderTable();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('無法從雲端基地讀取資料，請確認 API 網址與權限設定。');
+            } finally {
+                syncBtn.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        async function syncToCloud(action, recordData) {
+            if (!apiUrl) return;
+            try {
+                await fetch(apiUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, ...recordData })
+                });
+            } catch (err) {
+                console.error('雲端同步失敗', err);
+            }
         }
 
         function calculatePending() {
@@ -227,9 +339,8 @@
 
         function toggleForm(show = true) {
             const container = document.getElementById('formContainer');
-            if (show) {
-                container.classList.remove('hidden');
-            } else {
+            if (show) container.classList.remove('hidden');
+            else {
                 container.classList.add('hidden');
                 resetForm();
             }
@@ -242,8 +353,12 @@
             document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
         }
 
-        function saveRecord(e) {
+        async function saveRecord(e) {
             e.preventDefault();
+            const saveBtn = document.getElementById('saveSubmitBtn');
+            saveBtn.innerText = '處理中...';
+            saveBtn.disabled = true;
+
             const id = document.getElementById('recordId').value || Date.now().toString();
             const date = document.getElementById('dateInput').value;
             const person = document.getElementById('personInput').value.trim();
@@ -256,15 +371,35 @@
             const recordData = { id, date, person, product, price, received, arrived, shipped };
 
             const existingIndex = records.findIndex(r => r.id === id);
-            if (existingIndex > -1) {
-                records[existingIndex] = recordData;
-            } else {
-                records.unshift(recordData);
-            }
+            if (existingIndex > -1) records[existingIndex] = recordData;
+            else records.unshift(recordData);
 
-            saveToStorage();
+            localStorage.setItem('inventory_records', JSON.stringify(records));
             renderTable();
             toggleForm(false);
+
+            await syncToCloud('save', recordData);
+            saveBtn.innerText = '儲存紀錄';
+            saveBtn.disabled = false;
+        }
+
+        async function deleteRecord(id) {
+            if (confirm('確定要刪除這筆紀錄嗎？')) {
+                records = records.filter(r => r.id !== id);
+                localStorage.setItem('inventory_records', JSON.stringify(records));
+                renderTable();
+                await syncToCloud('delete', { id });
+            }
+        }
+
+        async function toggleStatus(id, field) {
+            const item = records.find(r => r.id === id);
+            if (item) {
+                item[field] = !item[field];
+                localStorage.setItem('inventory_records', JSON.stringify(records));
+                renderTable();
+                await syncToCloud('save', item);
+            }
         }
 
         function editRecord(id) {
@@ -285,29 +420,12 @@
             toggleForm(true);
         }
 
-        function deleteRecord(id) {
-            if (confirm('確定要刪除這筆紀錄嗎？')) {
-                records = records.filter(r => r.id !== id);
-                saveToStorage();
-                renderTable();
-            }
-        }
-
-        function toggleStatus(id, field) {
-            const item = records.find(r => r.id === id);
-            if (item) {
-                item[field] = !item[field];
-                saveToStorage();
-                renderTable();
-            }
-        }
-
         function renderTable() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const filter = document.getElementById('statusFilter').value;
 
             const filtered = records.filter(r => {
-                const matchesSearch = r.person.toLowerCase().includes(search) || r.product.toLowerCase().includes(search);
+                const matchesSearch = (r.person || '').toLowerCase().includes(search) || (r.product || '').toLowerCase().includes(search);
                 let matchesFilter = true;
 
                 if (filter === 'arrived') matchesFilter = r.arrived;
@@ -319,7 +437,6 @@
                 return matchesSearch && matchesFilter;
             });
 
-            // Update Summaries
             const totalPrice = records.reduce((sum, r) => sum + r.price, 0);
             const totalReceived = records.reduce((sum, r) => sum + r.received, 0);
             const totalPending = records.reduce((sum, r) => sum + Math.max(0, r.price - r.received), 0);
@@ -387,15 +504,15 @@
                 return;
             }
 
-            let csvContent = "\uFEFF"; // UTF-8 BOM for Excel Chinese support
+            let csvContent = "\uFEFF";
             csvContent += "日期,人名,商品名稱,售價,已收金額,未收金額/尾款,到貨狀態,寄出狀態\n";
 
             records.forEach(r => {
                 const pending = Math.max(0, r.price - r.received);
                 const row = [
                     `"${r.date}"`,
-                    `"${r.person.replace(/"/g, '""')}"`,
-                    `"${r.product.replace(/"/g, '""')}"`,
+                    `"${(r.person || '').replace(/"/g, '""')}"`,
+                    `"${(r.product || '').replace(/"/g, '""')}"`,
                     r.price,
                     r.received,
                     pending,
