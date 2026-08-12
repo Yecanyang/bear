@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>進出貨與帳務管理系統 - 批量人名拆分版</title>
+    <title>拉拉熊的回家計畫</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -12,6 +12,59 @@
         body {
             background-color: #f8fafc;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        
+        /* ====== 手機版卡片式表格優化 (RWD) ====== */
+        @media (max-width: 767px) {
+            .rwd-table thead { display: none; }
+            .rwd-table, .rwd-table tbody, .rwd-table tr, .rwd-table td { 
+                display: block; 
+                width: 100%; 
+            }
+            .rwd-table tr { 
+                margin-bottom: 1.25rem; 
+                background: #fff; 
+                border: 1px solid #e2e8f0; 
+                border-radius: 0.75rem; 
+                padding: 1rem; 
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+            }
+            .rwd-table td { 
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                padding: 0.6rem 0; 
+                border-bottom: 1px dashed #e2e8f0; 
+                text-align: right;
+            }
+            .rwd-table td:last-child { 
+                border-bottom: none; 
+                padding-bottom: 0; 
+            }
+            .rwd-table td::before { 
+                content: attr(data-label); 
+                font-weight: 600; 
+                color: #64748b; 
+                font-size: 0.8rem; 
+                margin-right: 1rem; 
+            }
+            
+            /* 針對特定欄位進行微調 */
+            .rwd-table td.col-notes { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                text-align: left; 
+            }
+            .rwd-table td.col-notes::before { 
+                margin-bottom: 0.3rem; 
+            }
+            .rwd-table td.col-actions { 
+                justify-content: flex-end; 
+                gap: 0.75rem; 
+                border-top: 1px solid #f1f5f9; 
+                padding-top: 1rem; 
+                margin-top: 0.5rem;
+            }
         }
     </style>
 </head>
@@ -38,7 +91,7 @@
                 </button>
                 <button onclick="exportCSV()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-3.5 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition shadow-sm border border-indigo-500">
                     <i data-lucide="download" class="w-4 h-4"></i>
-                    <span>匯出 CSV</span>
+                    <span class="hidden sm:inline">匯出 CSV</span>
                 </button>
             </div>
         </div>
@@ -92,7 +145,7 @@
                     <i data-lucide="clock" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">未收總尾款 (未寄出)</p>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">未收總尾款</p>
                     <p id="totalPending" class="text-2xl font-bold text-rose-600 mt-1">$0</p>
                 </div>
             </div>
@@ -111,11 +164,11 @@
         <!-- Controls -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
             <div class="flex flex-col sm:flex-row w-full md:w-auto gap-3">
-                <button onclick="toggleForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition shadow-sm">
+                <button onclick="toggleForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition shadow-sm w-full sm:w-auto">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     <span>新增進出貨紀錄</span>
                 </button>
-                <button onclick="fetchCloudData()" id="syncBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition">
+                <button onclick="fetchCloudData()" id="syncBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition w-full sm:w-auto">
                     <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                     <span>重新整理數據</span>
                 </button>
@@ -127,7 +180,7 @@
                     <input type="text" id="searchInput" oninput="renderTable()" placeholder="搜尋姓名、商品或備註..." class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
 
-                <select id="statusFilter" onchange="renderTable()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700">
+                <select id="statusFilter" onchange="renderTable()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 w-full sm:w-auto">
                     <option value="all">全部狀態</option>
                     <option value="arrived">已到貨</option>
                     <option value="not_arrived">未到貨</option>
@@ -156,7 +209,6 @@
                     <input type="date" id="dateInput" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
 
-                <!-- 人名輸入框：升級為可批量輸入的文字區塊 -->
                 <div class="md:col-span-2">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">人名 / 客戶 * <span class="text-indigo-600 font-normal">(有多人可用逗號、頓號或 Enter 換行隔開)</span></label>
                     <textarea id="personInput" rows="2" required placeholder="例如：張三, 李四, 王五 或按 Enter 換行寫多人" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
@@ -198,12 +250,11 @@
                     </select>
                 </div>
 
-                <!-- 圖片上傳 -->
                 <div class="md:col-span-2">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">商品圖片 (選擇圖片檔或貼上網址)</label>
                     <div class="flex items-center space-x-3">
-                        <input type="file" id="imageFileInput" accept="image/*" onchange="handleImageUpload(event)" class="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        <input type="url" id="imageUrlInput" placeholder="或貼上圖片網址" onchange="handleImageUrlChange(event)" class="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <input type="file" id="imageFileInput" accept="image/*" onchange="handleImageUpload(event)" class="text-xs text-slate-500 w-full md:w-auto file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        <input type="url" id="imageUrlInput" placeholder="或貼上圖片網址" onchange="handleImageUrlChange(event)" class="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none hidden md:block">
                     </div>
                     <div id="imagePreviewBox" class="mt-2 hidden flex items-center space-x-2">
                         <img id="imagePreview" src="" class="w-12 h-12 object-cover rounded border border-slate-200">
@@ -211,23 +262,23 @@
                     </div>
                 </div>
 
-                <!-- 客人備註 -->
                 <div class="md:col-span-2 lg:col-span-2">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">客人備註 / 需求說明</label>
                     <input type="text" id="notesInput" placeholder="例如：指定全家取貨、預計10號寄出..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
 
                 <div class="md:col-span-2 lg:col-span-4 flex justify-end space-x-3 mt-2">
-                    <button type="button" onclick="toggleForm(false)" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">取消</button>
-                    <button type="submit" id="saveSubmitBtn" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm">儲存紀錄</button>
+                    <button type="button" onclick="toggleForm(false)" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition w-full sm:w-auto">取消</button>
+                    <button type="submit" id="saveSubmitBtn" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm w-full sm:w-auto">儲存紀錄</button>
                 </div>
             </form>
         </div>
 
         <!-- Table View -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <!-- 加入 overflow-x-auto 保持電腦版橫向滾動 -->
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse rwd-table">
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                             <th class="py-3 px-4">圖片</th>
@@ -453,7 +504,6 @@
             const notes = document.getElementById('notesInput').value.trim();
 
             if (recordId) {
-                // 編輯單筆模式
                 const recordData = { id: recordId, date, person: rawPerson, product, price, received, arrived, shipped, image, notes };
                 const existingIndex = records.findIndex(r => r.id === recordId);
                 if (existingIndex > -1) records[existingIndex] = recordData;
@@ -464,7 +514,6 @@
 
                 await syncToCloud('save', recordData);
             } else {
-                // 新增模式：自動解析多個人名 (支援 逗號、頓號、換行)
                 const names = rawPerson.split(/[,，\n\r、]+/).map(n => n.trim()).filter(n => n.length > 0);
 
                 if (names.length === 0) {
@@ -477,7 +526,6 @@
                 const syncPromises = [];
                 const baseTimestamp = Date.now();
 
-                // 倒序插入陣列，確保列表上方顯示順序一致
                 for (let i = names.length - 1; i >= 0; i--) {
                     const singleName = names[i];
                     const singleId = (baseTimestamp + i).toString();
@@ -594,34 +642,35 @@
                         ? `<img src="${r.image}" class="w-10 h-10 object-cover rounded border border-slate-200">`
                         : `<div class="w-10 h-10 bg-slate-100 text-slate-400 rounded flex items-center justify-center text-xs"><i data-lucide="image" class="w-4 h-4"></i></div>`;
 
+                    // 加入 data-label 屬性以支援手機版卡片顯示標題
                     tr.innerHTML = `
-                        <td class="py-3 px-4">${imgTag}</td>
-                        <td class="py-3 px-4 font-mono text-slate-600">${r.date}</td>
-                        <td class="py-3 px-4 font-semibold text-slate-800">${escapeHtml(r.person)}</td>
-                        <td class="py-3 px-4 text-slate-700">${escapeHtml(r.product)}</td>
-                        <td class="py-3 px-4 text-right font-medium text-slate-900">$${r.price.toLocaleString()}</td>
-                        <td class="py-3 px-4 text-right text-emerald-600 font-medium">$${r.received.toLocaleString()}</td>
-                        <td class="py-3 px-4 text-right">
+                        <td class="py-3 px-4 col-img" data-label="圖片">${imgTag}</td>
+                        <td class="py-3 px-4 font-mono text-slate-600" data-label="日期">${r.date}</td>
+                        <td class="py-3 px-4 font-semibold text-slate-800" data-label="人名">${escapeHtml(r.person)}</td>
+                        <td class="py-3 px-4 text-slate-700" data-label="商品名稱">${escapeHtml(r.product)}</td>
+                        <td class="py-3 px-4 text-right font-medium text-slate-900" data-label="售價">$${r.price.toLocaleString()}</td>
+                        <td class="py-3 px-4 text-right text-emerald-600 font-medium" data-label="已收金額">$${r.received.toLocaleString()}</td>
+                        <td class="py-3 px-4 text-right" data-label="未收尾款">
                             ${isPaidInFull 
                                 ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">$0 (已付清)</span>` 
                                 : `<span class="font-bold text-rose-600">$${pending.toLocaleString()}</span>`}
                         </td>
-                        <td class="py-3 px-4 text-center">
+                        <td class="py-3 px-4 text-center" data-label="到貨狀態">
                             <button onclick="toggleStatus('${r.id}', 'arrived')" class="px-2.5 py-1 rounded-full text-xs font-semibold transition ${r.arrived ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}">
                                 ${r.arrived ? '已到貨' : '未到貨'}
                             </button>
                         </td>
-                        <td class="py-3 px-4 text-center">
+                        <td class="py-3 px-4 text-center" data-label="寄出狀態">
                             <button onclick="toggleStatus('${r.id}', 'shipped')" class="px-2.5 py-1 rounded-full text-xs font-semibold transition ${r.shipped ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
                                 ${r.shipped ? '已寄出' : '未寄出'}
                             </button>
                         </td>
-                        <td class="py-3 px-4 text-slate-500 text-xs max-w-xs truncate">${escapeHtml(r.notes || '-')}</td>
-                        <td class="py-3 px-4 text-center space-x-2">
-                            <button onclick="editRecord('${r.id}')" class="p-1 text-slate-400 hover:text-indigo-600 transition" title="編輯">
+                        <td class="py-3 px-4 text-slate-500 text-xs max-w-xs truncate col-notes" data-label="備註">${escapeHtml(r.notes || '-')}</td>
+                        <td class="py-3 px-4 text-center space-x-2 col-actions" data-label="操作">
+                            <button onclick="editRecord('${r.id}')" class="p-2 bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition" title="編輯">
                                 <i data-lucide="edit-3" class="w-4 h-4 inline"></i>
                             </button>
-                            <button onclick="deleteRecord('${r.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition" title="刪除">
+                            <button onclick="deleteRecord('${r.id}')" class="p-2 bg-slate-100 rounded-lg text-slate-400 hover:text-rose-600 transition" title="刪除">
                                 <i data-lucide="trash-2" class="w-4 h-4 inline"></i>
                             </button>
                         </td>
