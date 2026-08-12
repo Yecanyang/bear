@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>進出貨與帳務管理系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-12">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i data-lucide="box" class="w-8 h-8"></i>
+                <h1 class="text-2xl font-bold tracking-tight">進出貨與帳務管理系統</h1>
+            </div>
+            <button onclick="exportCSV()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition shadow-sm">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>匯出 CSV 報表</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
+
+        <!-- Metrics Overview -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center space-x-4">
+                <div class="p-3 bg-blue-50 text-blue-600 rounded-lg">
+                    <i data-lucide="dollar-sign" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">總銷售金額</p>
+                    <p id="totalPrice" class="text-2xl font-bold text-slate-900 mt-1">$0</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center space-x-4">
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">總已收金額</p>
+                    <p id="totalReceived" class="text-2xl font-bold text-emerald-600 mt-1">$0</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center space-x-4">
+                <div class="p-3 bg-rose-50 text-rose-600 rounded-lg">
+                    <i data-lucide="clock" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">未收總尾款</p>
+                    <p id="totalPending" class="text-2xl font-bold text-rose-600 mt-1">$0</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center space-x-4">
+                <div class="p-3 bg-amber-50 text-amber-600 rounded-lg">
+                    <i data-lucide="package" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">待寄出件數</p>
+                    <p id="pendingShipCount" class="text-2xl font-bold text-amber-600 mt-1">0 件</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls: Add Form Toggle, Search & Filter -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div class="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+                <button onclick="toggleForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center space-x-2 transition shadow-sm">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>新增進出貨紀錄</span>
+                </button>
+            </div>
+
+            <div class="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+                <!-- Search Box -->
+                <div class="relative w-full sm:w-64">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="searchInput" oninput="renderTable()" placeholder="搜尋姓名或商品..." class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
+                <!-- Status Filter -->
+                <select id="statusFilter" onchange="renderTable()" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700">
+                    <option value="all">全部狀態</option>
+                    <option value="arrived">已到貨</option>
+                    <option value="not_arrived">未到貨</option>
+                    <option value="shipped">已寄出</option>
+                    <option value="not_shipped">未寄出</option>
+                    <option value="unpaid">尚有尾款未收</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Modal Form for Add/Edit -->
+        <div id="formContainer" class="hidden bg-white rounded-xl shadow-md border border-indigo-100 p-6 transition-all">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-4 mb-4">
+                <h2 id="formTitle" class="text-lg font-bold text-slate-900">新增訂單紀錄</h2>
+                <button onclick="toggleForm(false)" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <form id="recordForm" onsubmit="saveRecord(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <input type="hidden" id="recordId">
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">日期 *</label>
+                    <input type="date" id="dateInput" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">人名 / 客戶 *</label>
+                    <input type="text" id="personInput" required placeholder="例如：張小明" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">商品名稱 *</label>
+                    <input type="text" id="productInput" required placeholder="例如：無線藍牙耳機" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">售價 ($) *</label>
+                    <input type="number" id="priceInput" min="0" step="1" required placeholder="0" oninput="calculatePending()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">已收金額 ($) *</label>
+                    <input type="number" id="receivedInput" min="0" step="1" required placeholder="0" oninput="calculatePending()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">未收金額 / 尾款 ($)</label>
+                    <input type="number" id="pendingInput" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-600 cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">到貨狀態</label>
+                    <select id="arrivedSelect" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="false">未到貨</option>
+                        <option value="true">已到貨</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">寄出狀態</label>
+                    <select id="shippedSelect" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="false">未寄出</option>
+                        <option value="true">已寄出</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-2 lg:col-span-4 flex justify-end space-x-3 mt-2">
+                    <button type="button" onclick="toggleForm(false)" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">取消</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm">儲存紀錄</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Table View -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <th class="py-3 px-4">日期</th>
+                            <th class="py-3 px-4">人名</th>
+                            <th class="py-3 px-4">商品名稱</th>
+                            <th class="py-3 px-4 text-right">售價</th>
+                            <th class="py-3 px-4 text-right">已收金額</th>
+                            <th class="py-3 px-4 text-right">未收尾款</th>
+                            <th class="py-3 px-4 text-center">到貨狀態</th>
+                            <th class="py-3 px-4 text-center">寄出狀態</th>
+                            <th class="py-3 px-4 text-center">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-200 text-sm">
+                        <!-- Dynamic content inserted by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="emptyState" class="hidden py-12 text-center text-slate-400">
+                <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 opacity-50"></i>
+                <p>尚無任何紀錄，請點擊「新增進出貨紀錄」開始新增。</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Sample Initial Data
+        let records = JSON.parse(localStorage.getItem('inventory_records')) || [
+            { id: '1', date: '2026-08-10', person: '陳大文', product: '機械鍵盤 RGB', price: 2500, received: 1000, arrived: true, shipped: false },
+            { id: '2', date: '2026-08-11', person: '林小美', product: '人體工學椅', price: 5800, received: 5800, arrived: true, shipped: true },
+            { id: '3', date: '2026-08-12', person: '黃先生', product: '27吋 4K 顯示器', price: 9200, received: 3000, arrived: false, shipped: false }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default date input to today
+            document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+            renderTable();
+            lucide.createIcons();
+        });
+
+        function saveToStorage() {
+            localStorage.setItem('inventory_records', JSON.stringify(records));
+        }
+
+        function calculatePending() {
+            const price = parseFloat(document.getElementById('priceInput').value) || 0;
+            const received = parseFloat(document.getElementById('receivedInput').value) || 0;
+            document.getElementById('pendingInput').value = Math.max(0, price - received);
+        }
+
+        function toggleForm(show = true) {
+            const container = document.getElementById('formContainer');
+            if (show) {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+                resetForm();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('recordForm').reset();
+            document.getElementById('recordId').value = '';
+            document.getElementById('formTitle').innerText = '新增訂單紀錄';
+            document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+        }
+
+        function saveRecord(e) {
+            e.preventDefault();
+            const id = document.getElementById('recordId').value || Date.now().toString();
+            const date = document.getElementById('dateInput').value;
+            const person = document.getElementById('personInput').value.trim();
+            const product = document.getElementById('productInput').value.trim();
+            const price = parseFloat(document.getElementById('priceInput').value) || 0;
+            const received = parseFloat(document.getElementById('receivedInput').value) || 0;
+            const arrived = document.getElementById('arrivedSelect').value === 'true';
+            const shipped = document.getElementById('shippedSelect').value === 'true';
+
+            const recordData = { id, date, person, product, price, received, arrived, shipped };
+
+            const existingIndex = records.findIndex(r => r.id === id);
+            if (existingIndex > -1) {
+                records[existingIndex] = recordData;
+            } else {
+                records.unshift(recordData);
+            }
+
+            saveToStorage();
+            renderTable();
+            toggleForm(false);
+        }
+
+        function editRecord(id) {
+            const item = records.find(r => r.id === id);
+            if (!item) return;
+
+            document.getElementById('recordId').value = item.id;
+            document.getElementById('dateInput').value = item.date;
+            document.getElementById('personInput').value = item.person;
+            document.getElementById('productInput').value = item.product;
+            document.getElementById('priceInput').value = item.price;
+            document.getElementById('receivedInput').value = item.received;
+            document.getElementById('pendingInput').value = Math.max(0, item.price - item.received);
+            document.getElementById('arrivedSelect').value = item.arrived ? 'true' : 'false';
+            document.getElementById('shippedSelect').value = item.shipped ? 'true' : 'false';
+
+            document.getElementById('formTitle').innerText = '編輯訂單紀錄';
+            toggleForm(true);
+        }
+
+        function deleteRecord(id) {
+            if (confirm('確定要刪除這筆紀錄嗎？')) {
+                records = records.filter(r => r.id !== id);
+                saveToStorage();
+                renderTable();
+            }
+        }
+
+        function toggleStatus(id, field) {
+            const item = records.find(r => r.id === id);
+            if (item) {
+                item[field] = !item[field];
+                saveToStorage();
+                renderTable();
+            }
+        }
+
+        function renderTable() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filter = document.getElementById('statusFilter').value;
+
+            const filtered = records.filter(r => {
+                const matchesSearch = r.person.toLowerCase().includes(search) || r.product.toLowerCase().includes(search);
+                let matchesFilter = true;
+
+                if (filter === 'arrived') matchesFilter = r.arrived;
+                else if (filter === 'not_arrived') matchesFilter = !r.arrived;
+                else if (filter === 'shipped') matchesFilter = r.shipped;
+                else if (filter === 'not_shipped') matchesFilter = !r.shipped;
+                else if (filter === 'unpaid') matchesFilter = (r.price - r.received) > 0;
+
+                return matchesSearch && matchesFilter;
+            });
+
+            // Update Summaries
+            const totalPrice = records.reduce((sum, r) => sum + r.price, 0);
+            const totalReceived = records.reduce((sum, r) => sum + r.received, 0);
+            const totalPending = records.reduce((sum, r) => sum + Math.max(0, r.price - r.received), 0);
+            const pendingShipCount = records.filter(r => !r.shipped).length;
+
+            document.getElementById('totalPrice').innerText = '$' + totalPrice.toLocaleString();
+            document.getElementById('totalReceived').innerText = '$' + totalReceived.toLocaleString();
+            document.getElementById('totalPending').innerText = '$' + totalPending.toLocaleString();
+            document.getElementById('pendingShipCount').innerText = pendingShipCount + ' 件';
+
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                filtered.forEach(r => {
+                    const pending = Math.max(0, r.price - r.received);
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition';
+
+                    tr.innerHTML = `
+                        <td class="py-3 px-4 font-mono text-slate-600">${r.date}</td>
+                        <td class="py-3 px-4 font-semibold text-slate-800">${escapeHtml(r.person)}</td>
+                        <td class="py-3 px-4 text-slate-700">${escapeHtml(r.product)}</td>
+                        <td class="py-3 px-4 text-right font-medium text-slate-900">$${r.price.toLocaleString()}</td>
+                        <td class="py-3 px-4 text-right text-emerald-600 font-medium">$${r.received.toLocaleString()}</td>
+                        <td class="py-3 px-4 text-right ${pending > 0 ? 'text-rose-600 font-bold' : 'text-slate-400'}">$${pending.toLocaleString()}</td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="toggleStatus('${r.id}', 'arrived')" class="px-2.5 py-1 rounded-full text-xs font-semibold transition ${r.arrived ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}">
+                                ${r.arrived ? '已到貨' : '未到貨'}
+                            </button>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="toggleStatus('${r.id}', 'shipped')" class="px-2.5 py-1 rounded-full text-xs font-semibold transition ${r.shipped ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                ${r.shipped ? '已寄出' : '未寄出'}
+                            </button>
+                        </td>
+                        <td class="py-3 px-4 text-center space-x-2">
+                            <button onclick="editRecord('${r.id}')" class="p-1 text-slate-400 hover:text-indigo-600 transition" title="編輯">
+                                <i data-lucide="edit-3" class="w-4 h-4 inline"></i>
+                            </button>
+                            <button onclick="deleteRecord('${r.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition" title="刪除">
+                                <i data-lucide="trash-2" class="w-4 h-4 inline"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }
+
+        function exportCSV() {
+            if (records.length === 0) {
+                alert('目前無可供匯出的紀錄！');
+                return;
+            }
+
+            let csvContent = "﻿"; // UTF-8 BOM for Excel Chinese support
+            csvContent += "日期,人名,商品名稱,售價,已收金額,未收金額/尾款,到貨狀態,寄出狀態\n";
+
+            records.forEach(r => {
+                const pending = Math.max(0, r.price - r.received);
+                const row = [
+                    `"${r.date}"`,
+                    `"${r.person.replace(/"/g, '""')}"`,
+                    `"${r.product.replace(/"/g, '""')}"`,
+                    r.price,
+                    r.received,
+                    pending,
+                    r.arrived ? "已到貨" : "未到貨",
+                    r.shipped ? "已寄出" : "未寄出"
+                ];
+                csvContent += row.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `進出貨紀錄表_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
